@@ -1,7 +1,7 @@
 'use client';
-/* eslint-disable @next/next/no-html-link-for-pages -- Vinext production navigation needs full-page anchors. */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Folder, Image as ImageIcon, Keyboard, MapPin, Mic, Square } from 'lucide-react';
 import {
   CATEGORY_EDIT_IDS,
   CATEGORY_OPTIONS,
@@ -35,7 +35,7 @@ import {
 } from '../../domain/catalog';
 import { clearDraft, emptyDraft, isCategorySuggested, readDraft, writeDraft, type ComplaintDraft, type PersonDetail, type PoliceStationChoice } from '../../domain/draft';
 import { detailsCanAdvance, reduceFiling, type FilingEvent, type MachineContext } from '../../domain/filing-machine';
-import { SakshiChrome, HelplineFooter } from '../chrome/sakshi-chrome';
+import { SakshiChrome, HelplineFooter, type JourneyStep } from '../chrome/sakshi-chrome';
 import { CrisisOverlay } from '../crisis/crisis-overlay';
 import { Button } from '../../shared/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '../../shared/ui/dialog';
@@ -208,7 +208,11 @@ export function FilingApp() {
   const matchingStations = stationSearch.trim()
     ? stations.filter((station) => station.name.toLowerCase().includes(stationSearch.trim().toLowerCase()))
     : stations;
-  const wide = step === 'details' || step === 'preview' || step === 'otp';
+  const wide = step === 'details' || step === 'preview' || step === 'evidence';
+  const journeyStep: JourneyStep | undefined =
+    step === 'account' || step === 'evidence' || step === 'details' || step === 'preview' || step === 'otp'
+      ? step
+      : undefined;
   const requiredItemsRemaining = Number(!draft.policeStation) + Number(isCategorySuggested(draft) && !draft.machine.categoryAccepted);
   const requiredItemsMessage = requiredItemsRemaining === 1
     ? t.requiredItemLeft.replace('{count}', String(requiredItemsRemaining))
@@ -407,11 +411,12 @@ export function FilingApp() {
   }
 
   return (
-    <div className="site-shell">
+    <div className={`site-shell${step === 'details' ? ' has-sticky-preview' : ''}`}>
       <SakshiChrome
         showStartAgain={step !== 'start'}
         onStartAgain={startAgain}
         onBrandClick={step === 'start' ? startAgain : undefined}
+        journeyStep={journeyStep}
       />
       {draft.restored && step !== 'start' ? (
         <div className={`page-main ${wide ? 'is-wide' : ''}`} style={{ paddingBottom: 0 }}>
@@ -421,49 +426,64 @@ export function FilingApp() {
 
       {step === 'start' ? (
         <main className="page-main start-screen stack">
-          <div className="start-hero">
-            <div className="start-presence" aria-hidden="true">
-              <StartPresence />
+          <div className="start-split">
+            <div className="start-story">
+              <div className="start-hero">
+                <div className="start-presence" aria-hidden="true">
+                  <StartPresence />
+                </div>
+                <div className="start-copy">
+                  <h1>{t.startTitle}</h1>
+                  <p>{t.startLede}</p>
+                  <p>{t.trustLine}</p>
+                </div>
+              </div>
+              {draft.restored ? (
+                <div className="start-restore">
+                  <p className="muted">{t.restore}</p>
+                  <Button variant="link" size="inline" onClick={() => send({ type: 'TELL_WHAT_HAPPENED' })}>{t.continue}</Button>
+                </div>
+              ) : null}
             </div>
-            <div className="start-copy">
-              <h1>{t.startTitle}</h1>
-              <p>{t.startLede}</p>
-              <p>{t.trustLine}</p>
+            <div className="start-cta">
+              <div className="start-doors">
+                <button type="button" className="door is-primary" onClick={() => send({ type: 'TELL_WHAT_HAPPENED' })}>
+                  <span className="door-head">
+                    <Mic className="door-icon icon-inline" aria-hidden="true" />
+                    <strong>{t.doorTell}</strong>
+                  </span>
+                  <span>{t.doorTellHint}</span>
+                </button>
+                <button type="button" className="door" onClick={() => send({ type: 'SAVE_EVIDENCE_FIRST' })}>
+                  <span className="door-head">
+                    <ImageIcon className="door-icon icon-inline" aria-hidden="true" />
+                    <strong>{t.doorEvidence}</strong>
+                  </span>
+                  <span>{t.doorEvidenceHint}</span>
+                </button>
+                <a className="door" href="/filed?verify=1">
+                  <span className="door-head">
+                    <Folder className="door-icon icon-inline" aria-hidden="true" />
+                    <strong>{t.doorFiled}</strong>
+                  </span>
+                  <span>{t.doorFiledHint}</span>
+                </a>
+              </div>
+              <nav className="start-links" aria-label="Before you begin">
+                <a href="/workflow">{t.howItWorks}</a>
+                <a href="/whats-real">{t.helpSupport}</a>
+              </nav>
             </div>
           </div>
-          {draft.restored ? (
-            <div className="start-restore">
-              <p className="muted">{t.restore}</p>
-              <Button variant="link" size="inline" onClick={() => send({ type: 'TELL_WHAT_HAPPENED' })}>{t.continue}</Button>
-            </div>
-          ) : null}
-          <div className="start-doors">
-            <button type="button" className="door is-primary" onClick={() => send({ type: 'TELL_WHAT_HAPPENED' })}>
-              <strong>{t.doorTell}</strong>
-              <span>{t.doorTellHint}</span>
-            </button>
-            <button type="button" className="door" onClick={() => send({ type: 'SAVE_EVIDENCE_FIRST' })}>
-              <strong>{t.doorEvidence}</strong>
-              <span>{t.doorEvidenceHint}</span>
-            </button>
-            <a className="door" href="/filed?verify=1">
-              <strong>{t.doorFiled}</strong>
-              <span>{t.doorFiledHint}</span>
-            </a>
-          </div>
-          <nav className="start-links" aria-label="Before you begin">
-            <a href="/workflow">{t.howItWorks}</a>
-            <a href="/whats-real">{t.helpSupport}</a>
-          </nav>
         </main>
       ) : null}
 
       {step === 'account' ? (
-        <main className="page-main account-screen stack">
+        <main className="page-main is-wide account-screen stack">
           <p className="kicker">{t.accountKicker}</p>
           <h1>{t.accountTitle}</h1>
           <p>{t.accountCopy}</p>
-          <section className="sample-complaint-cta" aria-label={t.sampleComplaintTitle}>
+          <section className="sample-complaint-cta account-sample-mobile" aria-label={t.sampleComplaintTitle}>
             <div>
               <span className="kicker">{t.sampleComplaintKicker}</span>
               <strong>{t.sampleComplaintTitle}</strong>
@@ -479,52 +499,77 @@ export function FilingApp() {
               aria-selected={draft.accountMode === 'voice'}
               disabled={recordingState !== 'idle'}
               onClick={() => persist({ ...draft, accountMode: 'voice' })}
-            >{t.speak}</button>
+            >
+              <Mic className="icon-inline" aria-hidden="true" />
+              {t.speak}
+            </button>
             <button
               type="button"
               role="tab"
               aria-selected={draft.accountMode !== 'voice'}
               disabled={recordingState !== 'idle'}
               onClick={() => persist({ ...draft, accountMode: 'type' })}
-            >{t.type}</button>
+            >
+              <Keyboard className="icon-inline" aria-hidden="true" />
+              {t.type}
+            </button>
           </div>
 
-          <section className="account-composer" aria-label={t.accountKicker}>
-            {draft.accountMode === 'voice' ? (
-              <section className={`voice-stage is-${recordingState}`} aria-live="polite">
-                <div className="voice-orb" aria-hidden="true" />
-                {recordingState === 'idle' ? (
-                  <>
-                    <strong>{t.voiceReady}</strong>
-                    <Button size="inline" onClick={() => void startVoice()}>{t.startRecording}</Button>
-                  </>
-                ) : null}
-                {recordingState === 'recording' ? (
-                  <>
-                    <strong className="recording-label"><i />{t.recordingNow}</strong>
-                    <p>{t.accountCopy}</p>
-                    <Button variant="secondary" size="inline" className="stop-recording-button" onClick={() => void stopVoice()}>{t.stopRecording}</Button>
-                  </>
-                ) : null}
-                {recordingState === 'transcribing' ? <strong>{t.turningSpeech}</strong> : null}
-              </section>
-            ) : null}
+          <div className="account-split">
+            <section className="account-composer" aria-label={t.accountKicker}>
+              {draft.accountMode === 'voice' ? (
+                <section className={`voice-stage is-${recordingState}`} aria-live="polite">
+                  <div className="voice-orb" aria-hidden="true" />
+                  {recordingState === 'idle' ? (
+                    <>
+                      <strong>{t.voiceReady}</strong>
+                      <Button size="inline" onClick={() => void startVoice()}>
+                        <Mic className="icon-inline" aria-hidden="true" />
+                        {t.startRecording}
+                      </Button>
+                    </>
+                  ) : null}
+                  {recordingState === 'recording' ? (
+                    <>
+                      <strong className="recording-label"><i />{t.recordingNow}</strong>
+                      <p>{t.accountCopy}</p>
+                      <Button variant="secondary" size="inline" className="stop-recording-button" onClick={() => void stopVoice()}>
+                        <Square className="icon-inline" fill="currentColor" aria-hidden="true" />
+                        {t.stopRecording}
+                      </Button>
+                    </>
+                  ) : null}
+                  {recordingState === 'transcribing' ? <strong>{t.turningSpeech}</strong> : null}
+                </section>
+              ) : null}
 
-            <div className="account-text">
-              <Label htmlFor="account">{t.whatHappened}</Label>
-              <p className="muted">{draft.accountText.trim() ? t.editWords : t.writeOwnWords}</p>
-              <Textarea
-                id="account"
-                lang={scriptLang(draft.accountText, locale)}
-                style={{ fontSize: 19, lineHeight: 1.85 }}
-                value={draft.accountText}
-                placeholder={t.whatHappened}
-                onChange={(event) => persist({ ...draft, accountText: event.target.value, accountMode: 'type' })}
-              />
-            </div>
-            <Button disabled={!draft.accountText.trim() || recordingState !== 'idle'} onClick={() => void continueFromAccount()}>{t.continue}</Button>
-            <p className="category-transfer-note">{t.prefillNote}</p>
-          </section>
+              <div className="account-text">
+                <Label htmlFor="account">{t.whatHappened}</Label>
+                <p className="muted">{draft.accountText.trim() ? t.editWords : t.writeOwnWords}</p>
+                <Textarea
+                  id="account"
+                  lang={scriptLang(draft.accountText, locale)}
+                  style={{ fontSize: 19, lineHeight: 1.85 }}
+                  value={draft.accountText}
+                  placeholder={t.whatHappened}
+                  onChange={(event) => persist({ ...draft, accountText: event.target.value, accountMode: 'type' })}
+                />
+              </div>
+              <Button disabled={!draft.accountText.trim() || recordingState !== 'idle'} onClick={() => void continueFromAccount()}>{t.continue}</Button>
+            </section>
+            <aside className="account-next card">
+              <span className="kicker">{t.accountNextTitle}</span>
+              <p>{t.prefillNote}</p>
+              <section className="sample-complaint-cta account-sample-desktop" aria-label={t.sampleComplaintTitle}>
+                <div>
+                  <span className="kicker">{t.sampleComplaintKicker}</span>
+                  <strong>{t.sampleComplaintTitle}</strong>
+                  <p>{t.sampleComplaintCopy}</p>
+                </div>
+                <Button onClick={() => persist({ ...draft, accountText: sample, accountMode: 'type' })}>{t.fillSample}</Button>
+              </section>
+            </aside>
+          </div>
           {voiceMessage ? <p className="voice-message" role="status">{voiceMessage}</p> : null}
           <Button variant="ghost" onClick={() => send({ type: 'BACK' })}>{t.back}</Button>
         </main>
@@ -664,7 +709,7 @@ export function FilingApp() {
                 }, { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60_000 });
               }}
             >
-              {locating ? <span className="category-processing-spinner" aria-hidden="true" /> : null}
+              {locating ? <span className="category-processing-spinner" aria-hidden="true" /> : <MapPin className="icon-inline" aria-hidden="true" />}
               {locating ? t.locating : t.useLocation}
             </Button>
             <p className="muted">{t.stationCoverageNote}</p>
@@ -753,7 +798,7 @@ export function FilingApp() {
               <p className="muted">{t.incidentDetailsCopy}</p>
             </div>
             <div className="details-fields incident-details-grid">
-              <label className="form-field">
+              <label className={`form-field${draft.platform ? '' : ' is-gap'}`}>
               <span>{t.whereDidThisHappen}</span>
               <select className={selectClass} aria-label={t.whereDidThisHappen} value={draft.platform} onChange={(event) => persist({ ...draft, platform: event.target.value as PrefillPlatform | '' })}>
                 <option value="">{t.selectService}</option>
@@ -761,7 +806,7 @@ export function FilingApp() {
               </select>
               {facts.platform.value && !draft.platform ? <small className="muted">{t.prefilledFromAccount.replace('{value}', facts.platform.value)}</small> : null}
             </label>
-            <label className="form-field">
+            <label className={`form-field${draft.mediaType ? '' : ' is-gap'}`}>
               <span>{t.typeOfMedia}</span>
               <select className={selectClass} aria-label={t.typeOfMedia} value={draft.mediaType} onChange={(event) => persist({ ...draft, mediaType: event.target.value as PrefillMediaType | '' })}>
                 <option value="">{t.selectMediaType}</option>
@@ -769,19 +814,19 @@ export function FilingApp() {
               </select>
             </label>
             {draft.platform === 'other' ? (
-              <label className="form-field incident-field-wide">
+              <label className={`form-field incident-field-wide${draft.otherPlatform ? '' : ' is-gap'}`}>
                 <span>{t.labelService}</span>
                 <Input value={draft.otherPlatform} onChange={(event) => persist({ ...draft, otherPlatform: event.target.value })} placeholder={t.otherPlatformPlaceholder} />
               </label>
             ) : null}
             {platformDetails ? (
-              <label className="form-field">
+              <label className={`form-field${draft.accountIdentifier ? '' : ' is-gap'}`}>
                 <span>{platformDetails.identifierLabel}</span>
                 <Input value={draft.accountIdentifier} onChange={(event) => persist({ ...draft, accountIdentifier: event.target.value })} placeholder={platformDetails.placeholder} />
                 <small className="muted">{t.identifierHelp}</small>
               </label>
             ) : null}
-            <label className="form-field">
+            <label className={`form-field${draft.firstSeen ? '' : ' is-gap'}`}>
               <span>{t.whenFirstSeen}</span>
               <Input value={draft.firstSeen} onChange={(event) => persist({ ...draft, firstSeen: event.target.value })} placeholder={t.firstSeenPlaceholder} />
               {facts.first_seen.value && !draft.firstSeen ? <small className="muted">{t.prefilledCorrect}</small> : null}
@@ -893,45 +938,49 @@ export function FilingApp() {
           <p className="kicker">{t.previewKicker}</p>
           <h1>{t.previewTitle}</h1>
           <p>{t.fileYours}</p>
-          <section className="card stack">
-            <h2>{t.yourAccount}</h2>
-            <p lang={scriptLang(draft.accountText, locale)}>{draft.accountText}</p>
-            <Button variant="link" size="inline" onClick={() => send({ type: 'BACK' })}>{t.editDetails}</Button>
-          </section>
-          <section className="card stack">
-            <h2>{t.complaintDetailsHeading}</h2>
-            <div className="fact-list">
-              <article><strong>{t.labelComplaintType}</strong><span>{categoryCitizenLabel(draft.category)}{draft.category && draft.category.id !== 'none' ? ` (${draft.category.label})` : ''}</span></article>
-              <article><strong>{t.labelService}</strong><span>{draft.otherPlatform || platformLabel(draft.platform) || t.valueNotSelected}</span></article>
-              <article><strong>{t.labelAccountOrIdentifier}</strong><span>{draft.accountIdentifier || t.valueNotAdded}</span></article>
-              <article><strong>{t.labelFirstSeen}</strong><span>{draft.firstSeen || t.valueNotAdded}</span></article>
-              <article><strong>{t.labelSupportingFile}</strong><span>{draft.supportingFile || draft.evidence.screenshot.fileName || t.valueNotAdded}</span></article>
-              {draft.policeStation ? <article><strong>{t.policeStation}</strong><span>{draft.policeStation.name}</span></article> : null}
+          <div className="preview-split">
+            <section className="card stack preview-narrative">
+              <h2>{t.yourAccount}</h2>
+              <p lang={scriptLang(draft.accountText, locale)}>{draft.accountText}</p>
+              <Button variant="link" size="inline" onClick={() => send({ type: 'BACK' })}>{t.editDetails}</Button>
+            </section>
+            <div className="preview-facts stack">
+              <section className="card stack">
+                <h2>{t.complaintDetailsHeading}</h2>
+                <div className="fact-list">
+                  <article><strong>{t.labelComplaintType}</strong><span>{categoryCitizenLabel(draft.category)}{draft.category && draft.category.id !== 'none' ? ` (${draft.category.label})` : ''}</span></article>
+                  <article><strong>{t.labelService}</strong><span>{draft.otherPlatform || platformLabel(draft.platform) || t.valueNotSelected}</span></article>
+                  <article><strong>{t.labelAccountOrIdentifier}</strong><span>{draft.accountIdentifier || t.valueNotAdded}</span></article>
+                  <article><strong>{t.labelFirstSeen}</strong><span>{draft.firstSeen || t.valueNotAdded}</span></article>
+                  <article><strong>{t.labelSupportingFile}</strong><span>{draft.supportingFile || draft.evidence.screenshot.fileName || t.valueNotAdded}</span></article>
+                  {draft.policeStation ? <article><strong>{t.policeStation}</strong><span>{draft.policeStation.name}</span></article> : null}
+                </div>
+              </section>
+              <EvidenceCarriedForward draft={draft} title={t.evidenceCarriedTitle} copy={t.evidenceCarriedCopy} />
+              <section className="card stack">
+                <h2>{t.personHeading}</h2>
+                {draft.persons.length || draft.personNotes || draft.personFile ? (
+                  <div className="fact-list">
+                    {draft.persons.map((person) => (
+                      <article key={person.id}>
+                        <strong>{person.name || t.personHeading}</strong>
+                        <span>{SUSPECT_IDENTIFIER_OPTIONS.find((item) => item.id === person.identifierType)?.label}: {person.identifier || t.valueNotAdded}</span>
+                      </article>
+                    ))}
+                    {draft.personFile ? <article><strong>{t.labelSupportingFile}</strong><span>{draft.personFile}</span></article> : null}
+                    {draft.personNotes ? <article className="full"><strong>{t.additionalIncidentInfo}</strong><span>{draft.personNotes}</span></article> : null}
+                  </div>
+                ) : <p className="muted">{t.noDetailsAdded}</p>}
+              </section>
+              <Button onClick={() => send({ type: 'CONTINUE' })}>{t.continueVerify}</Button>
+              <Button variant="ghost" onClick={() => send({ type: 'BACK' })}>{t.back}</Button>
             </div>
-          </section>
-          <EvidenceCarriedForward draft={draft} title={t.evidenceCarriedTitle} copy={t.evidenceCarriedCopy} />
-          <section className="card stack">
-            <h2>{t.personHeading}</h2>
-            {draft.persons.length || draft.personNotes || draft.personFile ? (
-              <div className="fact-list">
-                {draft.persons.map((person) => (
-                  <article key={person.id}>
-                    <strong>{person.name || t.personHeading}</strong>
-                    <span>{SUSPECT_IDENTIFIER_OPTIONS.find((item) => item.id === person.identifierType)?.label}: {person.identifier || t.valueNotAdded}</span>
-                  </article>
-                ))}
-                {draft.personFile ? <article><strong>{t.labelSupportingFile}</strong><span>{draft.personFile}</span></article> : null}
-                {draft.personNotes ? <article className="full"><strong>{t.additionalIncidentInfo}</strong><span>{draft.personNotes}</span></article> : null}
-              </div>
-            ) : <p className="muted">{t.noDetailsAdded}</p>}
-          </section>
-          <Button onClick={() => send({ type: 'CONTINUE' })}>{t.continueVerify}</Button>
-          <Button variant="ghost" onClick={() => send({ type: 'BACK' })}>{t.back}</Button>
+          </div>
         </main>
       ) : null}
 
       {step === 'otp' ? (
-        <main className="page-main stack">
+        <main className="page-main is-focus stack">
           <p className="kicker">{t.otpKicker}</p>
           <h1>{t.otpTitle}</h1>
           <p>{t.otpCopy}</p>

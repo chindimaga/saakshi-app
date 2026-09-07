@@ -7,7 +7,7 @@ import { leaveNow } from '../chrome/sakshi-chrome';
 export function CrisisOverlay({ onStartAgain }: { onStartAgain: () => void }) {
   const { t } = useCopy();
   return (
-    <main className="page-main stack">
+    <main className="page-main is-focus stack">
       <p className="kicker">{t.crisisKicker}</p>
       <h1>{t.crisisTitle}</h1>
       <p>{t.crisisCopy}</p>

@@ -8,7 +8,7 @@ export default function LeftPage() {
   const { t } = useCopy();
   useEffect(() => { clearDraft(); }, []);
   return (
-    <main className="page-main">
+    <main className="page-main is-focus">
       <h1>{t.notesTitle}</h1>
       <p>{t.notesCopy}</p>
     </main>

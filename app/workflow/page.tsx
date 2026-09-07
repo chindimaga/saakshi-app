@@ -14,7 +14,7 @@ export default function WorkflowPage() {
         <p className="kicker">Before you begin</p>
         <h1>{t.workflowTitle}</h1>
         <p>Start where you can. You stay in control of the words, details, and file.</p>
-        <section className="stack workflow-steps">
+        <section className="info-grid workflow-steps">
           <article className="card"><strong>Your words</strong><p>Speak or type what happened. Edit anything before you continue.</p></article>
           <article className="card"><strong>What you have</strong><p>Add evidence if you have it. Unknown details can stay unknown, and you can add more later.</p></article>
           <article className="card"><strong>Check the details</strong><p>Saakshi suggests a complaint type and pre-fills details. You can change every suggestion.</p></article>

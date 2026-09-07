@@ -1,6 +1,12 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { THEME_BOOT_SCRIPT } from '../shared/theme';
 import './globals.css';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+};
 
 const description = 'Independent prototype. Nothing entered here is submitted to the official portal.';
 const siteUrl = 'https://saakshi-v2.rahu760.chatgpt.site';

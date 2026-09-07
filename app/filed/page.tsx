@@ -263,7 +263,7 @@ export default function FiledPage() {
   return (
     <div className="site-shell">
       <SakshiChrome />
-      <main className="page-main is-dashboard stack">
+      <main className={`page-main stack ${gate === 'list' ? 'is-dashboard' : 'is-focus'}`}>
         <header className="dashboard-hero">
           <h1>{t.dashboardTitle}</h1>
           <p>{t.dashboardIntro}</p>
@@ -523,14 +523,20 @@ function CaseCard({
   const stage = complaintStage(item.status);
   const stageIndex = COMPLAINT_STAGES.findIndex((entry) => entry.id === stage);
   const transparency = STAGE_TRANSPARENCY[stage];
-  const milestoneIndex = CASE_PROGRESS_MILESTONES.findIndex((milestone) => milestone.stages.includes(stage));
+  const milestoneIndex = Math.max(0, CASE_PROGRESS_MILESTONES.findIndex((milestone) => milestone.stages.includes(stage)));
   const details = parseDetails(item.details_json);
   const citizen = categoryCitizenLabelFromId(item.category_id, item.category_label);
   const previewOpen = openId === item.id;
-  const progress = (stageIndex + 1) / COMPLAINT_STAGES.length;
+  const milestone = CASE_PROGRESS_MILESTONES[milestoneIndex];
+  const progress = (milestoneIndex + 1) / CASE_PROGRESS_MILESTONES.length;
+  const milestoneCount = t.milestoneCount
+    .replace('{n}', String(milestoneIndex + 1))
+    .replace('{total}', String(CASE_PROGRESS_MILESTONES.length))
+    .replace('{label}', milestone.label);
 
   return (
     <article className={cn('card stack saved-case-card', isLatest && 'is-latest')}>
+      <div className="saved-case-body">
       <div className="saved-case-heading">
         <button
           type="button"
@@ -579,14 +585,15 @@ function CaseCard({
           <dd>{item.police_station || t.valueNotSelected}</dd>
         </div>
       </dl>
+      </div>
       <section className="case-progress" aria-label={t.caseProgress}>
         <div className="case-progress-head">
           <div>
             <span className="kicker">{t.caseProgress}</span>
-            <strong>{COMPLAINT_STAGES[stageIndex].label}</strong>
+            <strong>{milestoneCount}</strong>
+            <p className="muted">{transparency.contact} · {transparency.role}</p>
             <p className="muted">{transparency.note}</p>
           </div>
-          <Badge variant="current">{stageIndex + 1} / {COMPLAINT_STAGES.length}</Badge>
         </div>
         <div className="meter" aria-hidden="true"><i style={{ transform: `scaleX(${progress})` }} /></div>
         <ol className="case-progress-rail">
@@ -626,6 +633,7 @@ function CaseCard({
           <button type="button" className="stage-step" disabled={stageIndex === 0} aria-label={t.previousFileStage} onClick={() => onStage(item, -1)}>
             <ChevronLeft size={20} aria-hidden="true" />
           </button>
+          <span className="case-progress-pager-label">{milestone.label}</span>
           <button type="button" className="stage-step" disabled={stageIndex === COMPLAINT_STAGES.length - 1} aria-label={t.nextFileStage} onClick={() => onStage(item, 1)}>
             <ChevronRight size={20} aria-hidden="true" />
           </button>

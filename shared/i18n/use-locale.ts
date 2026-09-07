@@ -1,20 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { LOCALE_EVENT, copyFor, isLocale, readStoredLocale, setAppLocale, type Locale } from '../i18n/copy';
+import { useCallback, useSyncExternalStore } from 'react';
+import { LOCALE_EVENT, copyFor, readStoredLocale, setAppLocale, type Locale } from '../i18n/copy';
+
+function subscribeLocale(onStoreChange: () => void) {
+  window.addEventListener(LOCALE_EVENT, onStoreChange);
+  return () => window.removeEventListener(LOCALE_EVENT, onStoreChange);
+}
 
 export function useLocaleState(): [Locale, (next: Locale) => void] {
-  const [locale, setLocale] = useState<Locale>('en');
-  useEffect(() => {
-    setLocale(readStoredLocale());
-    const onLocale = (event: Event) => {
-      const next = (event as CustomEvent<Locale>).detail;
-      if (isLocale(next)) setLocale(next);
-    };
-    window.addEventListener(LOCALE_EVENT, onLocale);
-    return () => window.removeEventListener(LOCALE_EVENT, onLocale);
-  }, []);
-  return [locale, (next) => { setLocale(next); setAppLocale(next); }];
+  const locale = useSyncExternalStore(subscribeLocale, readStoredLocale, () => 'en' as Locale);
+  const setLocale = useCallback((next: Locale) => { setAppLocale(next); }, []);
+  return [locale, setLocale];
 }
 
 export function useCopy() {

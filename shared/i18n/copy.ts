@@ -71,6 +71,9 @@ export type Copy = {
   themeDark: string;
   languageLegend: string;
   goToDashboard: string;
+  journeyNext: string;
+  milestoneCount: string;
+  accountNextTitle: string;
   leave: string;
   leaveHint: string;
   startAgain: string;
@@ -292,6 +295,9 @@ const en: Copy = {
   themeDark: 'Dark',
   languageLegend: 'Language',
   goToDashboard: 'Go to dashboard',
+  journeyNext: '{current} · next {next}',
+  milestoneCount: '{n} of {total} · {label}',
+  accountNextTitle: 'What happens next',
   leave: 'Leave',
   leaveHint: 'Leave opens a notes page and clears this draft. It does not erase browser history.',
   startAgain: 'Start again',
@@ -517,6 +523,9 @@ const kn: Copy = {
   themeDark: 'ಕತ್ತಲೆ',
   languageLegend: 'ಭಾಷೆ',
   goToDashboard: 'ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ಗೆ',
+  journeyNext: '{current} · ಮುಂದೆ {next}',
+  milestoneCount: '{total} ರಲ್ಲಿ {n} · {label}',
+  accountNextTitle: 'ಮುಂದೆ ಏನಾಗುತ್ತದೆ',
   leave: 'ಬಿಟ್ಟು ಹೋಗಿ',
   startAgain: 'ಮತ್ತೆ ಆರಂಭಿಸಿ',
   startOverTitle: 'ಹೊಸ ಫೈಲ್ ಆರಂಭಿಸುವುದೇ?',
@@ -575,6 +584,9 @@ const ta: Copy = {
   themeDark: 'இருள்',
   languageLegend: 'மொழி',
   goToDashboard: 'டாஷ்போர்டுக்கு',
+  journeyNext: '{current} · அடுத்து {next}',
+  milestoneCount: '{total}-இல் {n} · {label}',
+  accountNextTitle: 'அடுத்து என்ன நடக்கும்',
   leave: 'வெளியேறு',
   startAgain: 'மீண்டும் தொடங்கு',
   startOverTitle: 'புதிய கோப்பை தொடங்கவா?',
