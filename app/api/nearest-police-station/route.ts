@@ -100,8 +100,20 @@ async function handle(request: Request) {
         : [...stations].sort((left, right) => left.name.localeCompare(right.name));
 
       if (normalizedSearch) {
-        availableStations = availableStations.filter((station) =>
-          station.name.toLowerCase().includes(normalizedSearch));
+        const matchesSearch = (station: PoliceStation) =>
+          station.name.toLowerCase().includes(normalizedSearch)
+          || Boolean(station.address?.toLowerCase().includes(normalizedSearch));
+        availableStations = availableStations.filter(matchesSearch);
+        if (!availableStations.length) {
+          availableStations = stations.filter(matchesSearch);
+          if (selectedCity) {
+            availableStations = [...availableStations].sort((left, right) =>
+              haversineKm(left.latitude, left.longitude, selectedCity.latitude, selectedCity.longitude)
+              - haversineKm(right.latitude, right.longitude, selectedCity.latitude, selectedCity.longitude));
+          } else {
+            availableStations = [...availableStations].sort((left, right) => left.name.localeCompare(right.name));
+          }
+        }
       }
 
       availableStations = availableStations.slice(0, MAX_EDITABLE_STATIONS);

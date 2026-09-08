@@ -36,3 +36,20 @@ export const CASE_PROGRESS_MILESTONES: Array<{ label: string; stages: ComplaintS
   { label: 'Evidence review', stages: ['evidence_review', 'technical_forensic_review'] },
   { label: 'Investigation & outcome', stages: ['investigation_in_progress', 'outcome_preparation', 'closed'] },
 ];
+
+export function stagesUpTo(stage: ComplaintStage): ComplaintStage[] {
+  const index = COMPLAINT_STAGES.findIndex((entry) => entry.id === stage);
+  return COMPLAINT_STAGES.slice(0, Math.max(index, 0) + 1).map((entry) => entry.id);
+}
+
+export function policeUpdateForStage(stage: ComplaintStage) {
+  const transparency = STAGE_TRANSPARENCY[stage];
+  const label = COMPLAINT_STAGES.find((entry) => entry.id === stage)?.label ?? stage;
+  return {
+    stage,
+    label,
+    contact: transparency.contact,
+    role: transparency.role,
+    text: transparency.note,
+  };
+}

@@ -99,6 +99,7 @@ export function FilingApp() {
   const [stationSearch, setStationSearch] = useState('');
   const [stationOptionsOpen, setStationOptionsOpen] = useState(false);
   const [stations, setStations] = useState<PoliceStationChoice[]>([]);
+  const [stationsLoading, setStationsLoading] = useState(false);
   const [stationSuggestion, setStationSuggestion] = useState<PoliceStationChoice | null>(null);
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState('');
@@ -108,6 +109,8 @@ export function FilingApp() {
   const stationCardRef = useRef<HTMLElement | null>(null);
   const draftRef = useRef(draft);
   const loadedCityRef = useRef('');
+  const stationsRequestRef = useRef(0);
+  const stationSearchTimerRef = useRef(0);
   const recorder = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
 
@@ -136,24 +139,27 @@ export function FilingApp() {
     writeDraft(cleaned);
   }, []);
 
-  const loadStations = useCallback(async (city: string) => {
+  const loadStations = useCallback(async (city: string, search = '') => {
     if (!city) {
       setStations([]);
+      loadedCityRef.current = '';
       return;
     }
+    const requestId = ++stationsRequestRef.current;
+    setStationsLoading(true);
     try {
-      const result = await api.fetchStations(city);
-      const list = (result.available_stations as PoliceStationChoice[]) ?? [];
-      setStations(list);
-      // The API returns a city's stations sorted by distance from the district centre, so [0] is the nearest.
-      if (list.length && !draftRef.current.policeStation) {
-        persist({ ...draftRef.current, policeStation: list[0] });
-        setStationSearch(list[0].name);
-      }
+      const result = await api.fetchStations(city, search);
+      if (requestId !== stationsRequestRef.current) return;
+      setStations((result.available_stations as PoliceStationChoice[]) ?? []);
+      if (!search.trim()) loadedCityRef.current = city;
     } catch {
+      if (requestId !== stationsRequestRef.current) return;
       setStations([]);
+      if (!search.trim()) loadedCityRef.current = '';
+    } finally {
+      if (requestId === stationsRequestRef.current) setStationsLoading(false);
     }
-  }, [persist]);
+  }, []);
 
   const send = (event: FilingEvent, patch: Partial<ComplaintDraft> = {}) => {
     const next = { ...draftRef.current, ...patch };
@@ -177,6 +183,7 @@ export function FilingApp() {
     setOtp('');
     setStationSearch('');
     setStationSuggestion(null);
+    setStationOptionsOpen(false);
     setNeedsPoliceStation(false);
     setNeedsCategoryConfirm(false);
     loadedCityRef.current = '';
@@ -185,9 +192,10 @@ export function FilingApp() {
   useEffect(() => {
     if (draft.machine.step !== 'details' || !draft.policeStationCity) return;
     if (loadedCityRef.current === draft.policeStationCity) return;
-    loadedCityRef.current = draft.policeStationCity;
     void loadStations(draft.policeStationCity);
   }, [draft.machine.step, draft.policeStationCity, loadStations]);
+
+  useEffect(() => () => window.clearTimeout(stationSearchTimerRef.current), []);
 
   if (!ready) return null;
   if (draft.machine.crisis) {
@@ -205,8 +213,10 @@ export function FilingApp() {
   const step = draft.machine.step;
   const sample = locale === 'kn' ? SCRIPTED_TRANSCRIPT_KN : locale === 'ta' ? SCRIPTED_TRANSCRIPT_TA : SCRIPTED_TRANSCRIPT;
   const platformDetails = PLATFORM_OPTIONS.find((option) => option.id === draft.platform);
-  const matchingStations = stationSearch.trim()
-    ? stations.filter((station) => station.name.toLowerCase().includes(stationSearch.trim().toLowerCase()))
+  const matchingStations = draft.policeStation && !stations.some((station) =>
+    station.name === draft.policeStation?.name && station.latitude === draft.policeStation.latitude
+  )
+    ? [draft.policeStation, ...stations]
     : stations;
   const wide = step === 'details' || step === 'preview' || step === 'evidence';
   const journeyStep: JourneyStep | undefined =
@@ -327,11 +337,29 @@ export function FilingApp() {
     send({ type: 'CONTINUE' }, carryEvidenceForward(draftRef.current));
   }
 
-  async function loadStationsForCity(name: string) {
+  function loadStationsForCity(name: string) {
+    window.clearTimeout(stationSearchTimerRef.current);
     const current = draftRef.current;
-    persist({ ...current, policeStationCity: name, policeStation: name === current.policeStationCity ? current.policeStation : null });
-    loadedCityRef.current = name;
-    await loadStations(name);
+    persist({
+      ...current,
+      policeStationCity: name,
+      policeStation: name === current.policeStationCity ? current.policeStation : null,
+    });
+    loadedCityRef.current = '';
+    setStations([]);
+    if (!name) return;
+  }
+
+  function chooseStation(station: PoliceStationChoice) {
+    persist({
+      ...draftRef.current,
+      policeStation: station,
+      policeStationCity: station.city ?? draftRef.current.policeStationCity,
+    });
+    setStationSearch(station.name);
+    setStationOptionsOpen(false);
+    setStationSuggestion(null);
+    setNeedsPoliceStation(false);
   }
 
   function chooseCategory(id: CategoryId | 'none') {
@@ -696,6 +724,7 @@ export function FilingApp() {
                     loadedCityRef.current = city;
                     setStationSearch(station.name);
                     setStationSuggestion(station);
+                    setStationOptionsOpen(false);
                     setNeedsPoliceStation(false);
                     if (Array.isArray(nearest.available_stations)) setStations(nearest.available_stations as PoliceStationChoice[]);
                   } catch (error) {
@@ -720,13 +749,8 @@ export function FilingApp() {
                 {typeof stationSuggestion.distance_km === 'number' ? (
                   <small className="muted">{stationSuggestion.distance_km.toFixed(1)} {t.kmAway}</small>
                 ) : null}
-                <Button onClick={() => {
-                  persist({ ...draftRef.current, policeStation: stationSuggestion, policeStationCity: stationSuggestion.city ?? draftRef.current.policeStationCity });
-                  setStationSearch(stationSuggestion.name);
-                  setStationSuggestion(null);
-                  setNeedsPoliceStation(false);
-                }}>{t.useThisStation}</Button>
-                <Button variant="secondary" onClick={() => { setStationSuggestion(null); setStationSearch(''); persist({ ...draftRef.current, policeStation: null }); }}>{t.chooseAnotherStation}</Button>
+                <Button onClick={() => chooseStation(stationSuggestion)}>{t.useThisStation}</Button>
+                <Button variant="secondary" onClick={() => { setStationSuggestion(null); setStationSearch(''); persist({ ...draftRef.current, policeStation: null }); setStationOptionsOpen(true); }}>{t.chooseAnotherStation}</Button>
               </div>
             ) : null}
             {locationError ? <p className="voice-message" role="alert">{locationError}</p> : null}
@@ -747,7 +771,8 @@ export function FilingApp() {
                   onChange={(event) => {
                     setStationSearch('');
                     setStationSuggestion(null);
-                    void loadStationsForCity(event.target.value);
+                    setStationOptionsOpen(Boolean(event.target.value));
+                    loadStationsForCity(event.target.value);
                   }}
                 >
                   <option value="">{t.chooseCity}</option>
@@ -760,35 +785,56 @@ export function FilingApp() {
                 <span>{t.policeStation}</span>
                 <Input
                   aria-label={t.policeStation}
+                  aria-expanded={stationOptionsOpen}
+                  aria-controls="station-options"
                   autoComplete="off"
                   disabled={!draft.policeStationCity}
-                  value={stationSearch || draft.policeStation?.name || ''}
+                  value={stationSearch}
                   placeholder={draft.policeStationCity ? t.stationSearchPlaceholder : t.chooseCityFirst}
                   onChange={(event) => {
-                    setStationSearch(event.target.value);
+                    const value = event.target.value;
+                    setStationSearch(value);
                     setStationOptionsOpen(true);
                     setStationSuggestion(null);
-                    persist({ ...draftRef.current, policeStation: null });
+                    const selected = draftRef.current.policeStation;
+                    if (selected && value.trim().toLowerCase() !== selected.name.toLowerCase()) {
+                      persist({ ...draftRef.current, policeStation: null });
+                    }
+                    window.clearTimeout(stationSearchTimerRef.current);
+                    stationSearchTimerRef.current = window.setTimeout(() => {
+                      void loadStations(draftRef.current.policeStationCity, value);
+                    }, 250);
                   }}
-                  onFocus={() => setStationOptionsOpen(true)}
+                  onFocus={() => {
+                    setStationOptionsOpen(true);
+                    if (!draft.policeStationCity) return;
+                    void loadStations(draft.policeStationCity, draft.policeStation ? '' : stationSearch);
+                  }}
+                  onBlur={() => {
+                    window.setTimeout(() => setStationOptionsOpen(false), 180);
+                  }}
                 />
               </label>
             </div>
-            {!draft.policeStation && (stationSearch.trim() || stationOptionsOpen) && draft.policeStationCity ? (
-              <div className="stack" role="listbox" aria-label={t.policeStation}>
+            {draft.policeStationCity && (stationOptionsOpen || !draft.policeStation) ? (
+              <div id="station-options" className="station-options" role="listbox" aria-label={t.policeStation}>
                 {matchingStations.map((station) => (
-                  <Button key={`${station.name}-${station.latitude}`} variant="ghost" onClick={() => {
-                    persist({ ...draftRef.current, policeStation: station });
-                    setStationSearch(station.name);
-                    setStationOptionsOpen(false);
-                    setStationSuggestion(null);
-                    setNeedsPoliceStation(false);
-                  }}>{station.name}</Button>
+                  <Button
+                    key={`${station.name}-${station.latitude}`}
+                    type="button"
+                    variant="ghost"
+                    role="option"
+                    aria-selected={draft.policeStation?.name === station.name && draft.policeStation.latitude === station.latitude}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => chooseStation(station)}
+                  >
+                    {station.name}
+                  </Button>
                 ))}
-                {matchingStations.length === 0 ? <p className="muted">{t.noStations}</p> : null}
+                {stationsLoading ? <span className="category-processing-spinner" aria-hidden="true" /> : null}
+                {!stationsLoading && matchingStations.length === 0 ? <p className="muted">{t.noStations}</p> : null}
               </div>
             ) : null}
-            {draft.policeStation ? <p>{draft.policeStation.name}</p> : null}
           </section>
 
           <section className="card stack incident-details-card" aria-labelledby="incident-details-title">

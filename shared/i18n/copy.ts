@@ -244,6 +244,25 @@ export type Copy = {
   noUpdatesYet: string;
   addMessage: string;
   updateThreadTitle: string;
+  threadYou: string;
+  threadPoliceUpdate: string;
+  latestThreadUpdate: string;
+  unreadThreadCount: string;
+  discardEdits: string;
+  keepEditing: string;
+  removeEvidenceConfirm: string;
+  evidenceVault: string;
+  evidenceVaultTitle: string;
+  evidenceVaultCopy: string;
+  addEvidenceFile: string;
+  evidenceFileHelp: string;
+  evidenceNotePlaceholder: string;
+  addEvidenceNote: string;
+  noEvidenceYet: string;
+  downloadEvidence: string;
+  fileEvidence: string;
+  audioEvidence: string;
+  noteEvidence: string;
   cancel: string;
   previewUpdatedFile: string;
   checkUpdatedDetails: string;
@@ -464,10 +483,29 @@ const en: Copy = {
   savingChanges: 'Saving changes…',
   backToEdit: 'Back to edit',
   closeAction: 'Close',
-  prototypeThreadNote: 'Messages stay in this prototype. They are not sent anywhere.',
+  prototypeThreadNote: 'Demo conversation for this file. Your messages stay on the right. Simulated police updates appear on the left when the stage changes. Nothing is sent.',
   noUpdatesYet: 'No messages yet.',
-  addMessage: 'Add message',
+  addMessage: 'Send message',
   updateThreadTitle: 'Update thread',
+  threadYou: 'You',
+  threadPoliceUpdate: 'Police update',
+  latestThreadUpdate: 'Latest in thread',
+  unreadThreadCount: '{count} new',
+  discardEdits: 'Close without saving these changes?',
+  keepEditing: 'Keep editing',
+  removeEvidenceConfirm: 'Remove this from the file?',
+  evidenceVault: 'Evidence vault',
+  evidenceVaultTitle: 'Add evidence to this file',
+  evidenceVaultCopy: 'Files stay in this private prototype vault. They are not sent to the official portal.',
+  addEvidenceFile: 'Add image, PDF, video or audio',
+  evidenceFileHelp: 'Audio, video, photo, or PDF',
+  evidenceNotePlaceholder: 'Add a note about evidence or a new detail',
+  addEvidenceNote: 'Add note',
+  noEvidenceYet: 'No evidence has been added to this file yet.',
+  downloadEvidence: 'Download',
+  fileEvidence: 'File evidence',
+  audioEvidence: 'Audio evidence',
+  noteEvidence: 'Note',
   cancel: 'Cancel',
   previewUpdatedFile: 'Preview updated file',
   checkUpdatedDetails: 'Check the updated details before saving.',
@@ -485,7 +523,7 @@ const en: Copy = {
   dashboardDemo: 'Demo only. Stage dates are not a real FIR tracker.',
   openAnyFile: 'Open a file to review what you saved.',
   currentFile: 'Current file',
-  writeUpdate: 'Write an update',
+  writeUpdate: 'Write a message',
   useAnotherNumber: 'Use another number',
   detailsUpdated: 'Details updated.',
   openingDashboard: 'Opening your files…',

@@ -99,10 +99,16 @@ export function fetchCities() {
   return apiJson<{ cities: Array<{ name: string }> }>('/api/nearest-police-station?cities=true');
 }
 
-export function fetchStations(city: string) {
-  return apiJson<{ available_stations: Array<Record<string, unknown>> }>(
-    `/api/nearest-police-station?list=true&city=${encodeURIComponent(city)}`,
-  );
+export async function fetchStations(city: string, search = '') {
+  const params = new URLSearchParams({ list: 'true', city });
+  if (search.trim()) params.set('search', search.trim());
+  const response = await fetch(`/api/nearest-police-station?${params}`, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+  const body = await response.json() as { available_stations?: Array<Record<string, unknown>>; error?: string };
+  if (response.status === 404) return { available_stations: [] as Array<Record<string, unknown>> };
+  if (!response.ok) throw new Error(body.error || 'Request failed');
+  return { available_stations: body.available_stations ?? [] };
 }
 
 export function fetchNearest(lat: number, lng: number) {
